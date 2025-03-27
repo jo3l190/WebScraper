@@ -20,42 +20,38 @@ class BaseScraper(ABC):
         
         # Basic configuration
         chrome_options.add_argument("--headless=new")
-        chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--disable-features=NetworkService")
+        chrome_options.add_argument("--window-size=1920x1080")
+        chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+        chrome_options.add_argument('--ignore-certificate-errors')
         
         if platform.system() == "Linux":  # For Streamlit Cloud
             chrome_options.binary_location = "/usr/bin/chromium-browser"
-            
-            # Force specific ChromeDriver version to match Chrome
             try:
-                from selenium.webdriver.chrome.service import Service
-                chrome_version = "134.0.6998.165"  # Match the detected Chrome version
-                driver = webdriver.Chrome(
-                    service=Service(ChromeDriverManager(version=chrome_version).install()),
-                    options=chrome_options
+                service = Service(
+                    executable_path="/usr/bin/chromedriver",
+                    log_output=os.path.join(os.getcwd(), 'selenium.log')
                 )
+                driver = webdriver.Chrome(service=service, options=chrome_options)
                 return driver
             except Exception as e1:
-                print(f"Failed with specific version: {e1}")
+                print(f"Failed with system chromedriver: {e1}")
                 try:
-                    # Try with default ChromeDriver
-                    chrome_options.add_argument("--ignore-certificate-errors")
-                    return webdriver.Chrome(options=chrome_options)
+                    # Try with ChromeDriverManager
+                    service = Service(ChromeDriverManager().install())
+                    driver = webdriver.Chrome(service=service, options=chrome_options)
+                    return driver
                 except Exception as e2:
-                    print(f"Failed with default options: {e2}")
-                    # Last resort - try with minimal options
-                    return webdriver.Chrome(
-                        service=Service("/usr/bin/chromedriver"),
-                        options=chrome_options
-                    )
+                    print(f"Failed with ChromeDriverManager: {e2}")
+                    # Last resort - try with minimal configuration
+                    return webdriver.Chrome(options=chrome_options)
         else:  # For local development
             try:
-                return webdriver.Chrome(
-                    service=Service(ChromeDriverManager().install()),
-                    options=chrome_options
-                )
+                service = Service(ChromeDriverManager().install())
+                return webdriver.Chrome(service=service, options=chrome_options)
             except Exception as e:
                 print(f"Local Chrome initialization failed: {e}")
                 return webdriver.Chrome(options=chrome_options)
