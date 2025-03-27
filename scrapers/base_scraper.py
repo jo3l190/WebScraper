@@ -24,27 +24,24 @@ class BaseScraper(ABC):
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--window-size=1920,1080")
-        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
         
         if platform.system() == "Linux":  # For Streamlit Cloud
+            chrome_options.binary_location = "/usr/bin/chromium-browser"
             try:
-                # Use system Chromium
-                chrome_options.binary_location = "/usr/bin/chromium-browser"
+                # Use ChromeDriverManager with specific version
                 return webdriver.Chrome(
-                    options=chrome_options,
-                    service=Service('/usr/bin/chromedriver')
+                    service=Service(ChromeDriverManager(version="134.0.6998.165").install()),
+                    options=chrome_options
                 )
             except Exception as e1:
-                print(f"System ChromeDriver failed: {e1}")
+                print(f"ChromeDriverManager failed: {e1}")
                 try:
-                    # Try using ChromeDriverManager
-                    return webdriver.Chrome(
-                        service=Service(ChromeDriverManager(version="stable").install()),
-                        options=chrome_options
-                    )
+                    # Try system ChromeDriver
+                    return webdriver.Chrome(options=chrome_options)
                 except Exception as e2:
-                    print(f"ChromeDriverManager failed: {e2}")
+                    print(f"System ChromeDriver failed: {e2}")
                     # Final fallback
+                    chrome_options.add_argument("--ignore-certificate-errors")
                     return webdriver.Chrome(options=chrome_options)
         else:  # For local development
             try:
