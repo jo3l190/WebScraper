@@ -24,25 +24,37 @@ class BaseScraper(ABC):
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
         
-        try:
-            if platform.system() == "Linux":  # For Streamlit Cloud
+        if platform.system() == "Linux":  # For Streamlit Cloud
+            try:
+                # Use system Chromium
                 chrome_options.binary_location = "/usr/bin/chromium-browser"
-                # Use default ChromeDriver
-                driver = webdriver.Chrome(options=chrome_options)
-            else:  # For local development
-                service = Service(ChromeDriverManager().install())
-                driver = webdriver.Chrome(
-                    service=service,
+                return webdriver.Chrome(
+                    options=chrome_options,
+                    service=Service('/usr/bin/chromedriver')
+                )
+            except Exception as e1:
+                print(f"System ChromeDriver failed: {e1}")
+                try:
+                    # Try using ChromeDriverManager
+                    return webdriver.Chrome(
+                        service=Service(ChromeDriverManager(version="stable").install()),
+                        options=chrome_options
+                    )
+                except Exception as e2:
+                    print(f"ChromeDriverManager failed: {e2}")
+                    # Final fallback
+                    return webdriver.Chrome(options=chrome_options)
+        else:  # For local development
+            try:
+                return webdriver.Chrome(
+                    service=Service(ChromeDriverManager().install()),
                     options=chrome_options
                 )
-            
-            return driver
-            
-        except Exception as e:
-            print(f"Chrome initialization failed: {str(e)}")
-            # Final fallback
-            return webdriver.Chrome(options=chrome_options)
+            except Exception as e:
+                print(f"Local Chrome initialization failed: {e}")
+                return webdriver.Chrome(options=chrome_options)
     
     @abstractmethod
     def scrape(self, *args, **kwargs) -> pd.DataFrame:
