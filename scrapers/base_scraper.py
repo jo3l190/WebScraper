@@ -27,26 +27,29 @@ class BaseScraper(ABC):
         
         if platform.system() == "Linux":  # For Streamlit Cloud
             chrome_options.binary_location = "/usr/bin/chromium-browser"
+            
+            # Force specific ChromeDriver version to match Chrome
             try:
-                # Get Chrome version and use matching ChromeDriver
-                chrome_version = self._get_chrome_version()
-                return webdriver.Chrome(
+                from selenium.webdriver.chrome.service import Service
+                chrome_version = "134.0.6998.165"  # Match the detected Chrome version
+                driver = webdriver.Chrome(
                     service=Service(ChromeDriverManager(version=chrome_version).install()),
                     options=chrome_options
                 )
+                return driver
             except Exception as e1:
-                print(f"ChromeDriverManager failed: {e1}")
+                print(f"Failed with specific version: {e1}")
                 try:
-                    # Try with latest ChromeDriver
-                    return webdriver.Chrome(
-                        service=Service(ChromeDriverManager().install()),
-                        options=chrome_options
-                    )
-                except Exception as e2:
-                    print(f"Latest ChromeDriver failed: {e2}")
-                    # Final fallback with system ChromeDriver
+                    # Try with default ChromeDriver
                     chrome_options.add_argument("--ignore-certificate-errors")
                     return webdriver.Chrome(options=chrome_options)
+                except Exception as e2:
+                    print(f"Failed with default options: {e2}")
+                    # Last resort - try with minimal options
+                    return webdriver.Chrome(
+                        service=Service("/usr/bin/chromedriver"),
+                        options=chrome_options
+                    )
         else:  # For local development
             try:
                 return webdriver.Chrome(
