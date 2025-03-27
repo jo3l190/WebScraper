@@ -28,19 +28,23 @@ class BaseScraper(ABC):
         if platform.system() == "Linux":  # For Streamlit Cloud
             chrome_options.binary_location = "/usr/bin/chromium-browser"
             try:
-                # Use ChromeDriverManager with specific version
+                # Get Chrome version and use matching ChromeDriver
+                chrome_version = self._get_chrome_version()
                 return webdriver.Chrome(
-                    service=Service(ChromeDriverManager(version="134.0.6998.165").install()),
+                    service=Service(ChromeDriverManager(version=chrome_version).install()),
                     options=chrome_options
                 )
             except Exception as e1:
                 print(f"ChromeDriverManager failed: {e1}")
                 try:
-                    # Try system ChromeDriver
-                    return webdriver.Chrome(options=chrome_options)
+                    # Try with latest ChromeDriver
+                    return webdriver.Chrome(
+                        service=Service(ChromeDriverManager().install()),
+                        options=chrome_options
+                    )
                 except Exception as e2:
-                    print(f"System ChromeDriver failed: {e2}")
-                    # Final fallback
+                    print(f"Latest ChromeDriver failed: {e2}")
+                    # Final fallback with system ChromeDriver
                     chrome_options.add_argument("--ignore-certificate-errors")
                     return webdriver.Chrome(options=chrome_options)
         else:  # For local development
@@ -52,6 +56,18 @@ class BaseScraper(ABC):
             except Exception as e:
                 print(f"Local Chrome initialization failed: {e}")
                 return webdriver.Chrome(options=chrome_options)
+
+    def _get_chrome_version(self) -> str:
+        """Get installed Chrome/Chromium version."""
+        try:
+            import subprocess
+            if platform.system() == "Linux":
+                output = subprocess.check_output(['chromium-browser', '--version'])
+                version = output.decode('utf-8').split()[1].split('.')[0]
+                return f"{version}.0.0.0"
+        except Exception as e:
+            print(f"Failed to get Chrome version: {e}")
+        return "latest"
     
     @abstractmethod
     def scrape(self, *args, **kwargs) -> pd.DataFrame:
