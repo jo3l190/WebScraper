@@ -6,7 +6,6 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-from webdriver_manager.core.utils import ChromeType
 
 class BaseScraper(ABC):
     """Base class for all web scrapers."""
@@ -29,19 +28,16 @@ class BaseScraper(ABC):
         try:
             if platform.system() == "Linux":  # For Streamlit Cloud
                 chrome_options.binary_location = "/usr/bin/chromium-browser"
-                # Use ChromeDriverManager with Chromium
-                driver_path = ChromeDriverManager(
-                    chrome_type=ChromeType.CHROMIUM,
-                    version="latest"
-                ).install()
-                service = Service(driver_path)
+                # Use default ChromeDriver
+                driver = webdriver.Chrome(options=chrome_options)
             else:  # For local development
                 service = Service(ChromeDriverManager().install())
+                driver = webdriver.Chrome(
+                    service=service,
+                    options=chrome_options
+                )
             
-            return webdriver.Chrome(
-                service=service,
-                options=chrome_options
-            )
+            return driver
             
         except Exception as e:
             print(f"Chrome initialization failed: {str(e)}")
