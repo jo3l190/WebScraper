@@ -49,8 +49,21 @@ if scraper_option == "Justdial":
             st.warning("Please enter a search query.")
 
 elif scraper_option == "Google Maps":
+    st.info("Note: Google Maps typically returns a maximum of 100-115 results per query.")
+    
     query = st.text_input("Enter search query:", "")
-    num_results = st.number_input("Number of results:", min_value=1)
+    
+    # Add radio button to choose between limited and all results
+    scrape_option = st.radio(
+        "Scraping Option:",
+        ("Limited Results", "All Available Results")
+    )
+    
+    # Show number input only for limited results option
+    num_results = None
+    if scrape_option == "Limited Results":
+        num_results = st.number_input("Number of results:", min_value=1, max_value=115)
+    
     min_rating = st.slider(
         "Minimum Rating:",
         min_value=0.0,
@@ -61,10 +74,11 @@ elif scraper_option == "Google Maps":
 
     if st.button("Scrape Data"):
         if query:
-            with st.spinner("Scraping data..."):
+            with st.spinner("Scraping data... This may take a while for all results"):
                 try:
                     scraper = GoogleMapsScraper()
-                    df = scraper.scrape(query, num_results)
+                    # Pass None as num_results to get all available data
+                    df = scraper.scrape(query, num_results) if num_results else scraper.scrape(query)
                     
                     if df is not None and not df.empty:
                         st.success("Scraping completed successfully!")
@@ -99,12 +113,22 @@ elif scraper_option == "Google Maps":
 elif scraper_option == "Zomato Bakeries":
     city = st.text_input("Enter city name:", "")
     
+    # Add price category information
+    st.info("""
+    Price Categories:
+    - Budget Friendly: Less than ₹300
+    - Pocket Friendly: ₹300 – ₹599  
+    - Moderate: ₹600 – ₹999
+    - Premium: ₹1,000 – ₹1,499
+    - Luxury: ₹1,500 and above
+    """)
+    
     # Price category selection
     price_categories = st.multiselect(
         "Select Price Categories:",
         options=[
             "Budget Friendly",
-            "Pocket Friendly",
+            "Pocket Friendly", 
             "Moderate",
             "Premium",
             "Luxury"

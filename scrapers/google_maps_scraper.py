@@ -145,7 +145,7 @@ class GoogleMapsScraper(BaseScraper):
             self.driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
             time.sleep(1)
 
-    def scrape(self, query: str, num_results: int = 10) -> pd.DataFrame:
+    def scrape(self, query: str, num_results: Optional[int] = None) -> pd.DataFrame:
         """Main scraping method to collect and process Google Maps listings."""
         try:
             self.driver.get(self.base_url)
@@ -156,7 +156,8 @@ class GoogleMapsScraper(BaseScraper):
             results = self._load_more_results()
             last_count = 0
 
-            while len(places_data) < num_results and scroll_attempts < self.MAX_SCROLL_ATTEMPTS:
+            # Keep scrolling until we have enough results or no more are available
+            while (num_results is None or len(places_data) < num_results) and scroll_attempts < self.MAX_SCROLL_ATTEMPTS:
                 if not results:
                     # Check if we're truly at the end
                     current_count = len(places_data)
@@ -172,7 +173,11 @@ class GoogleMapsScraper(BaseScraper):
                     results = self._load_more_results()
                     continue
 
-                batch_size = min(5, num_results - len(places_data))
+                # Process current batch
+                batch_size = 5  # Process in small batches to avoid timeouts
+                if num_results:
+                    batch_size = min(5, num_results - len(places_data))
+                    
                 current_batch = results[:batch_size]
                 results = results[batch_size:]
 
@@ -195,7 +200,7 @@ class GoogleMapsScraper(BaseScraper):
 
                         print(f"Processed: {place_info['Name']} ({len(places_data)}/{num_results})")
 
-                        if len(places_data) >= num_results:
+                        if num_results and len(places_data) >= num_results:
                             break
 
                     except Exception as e:
